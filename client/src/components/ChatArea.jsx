@@ -3,7 +3,7 @@ import useAuthStore from "../store/useAuthStore";
 import useChatStore from "../store/useChatStore";
 import MessageInput from "./MessageInput";
 import { getChatName, getChatPic, getChatUser, formatTime, formatDate, formatFileSize, getFileIcon, fileUrl } from "../lib/utils";
-import { ArrowLeft, MoreVertical, Info } from "lucide-react";
+import { ArrowLeft, MoreVertical, Info, Check, CheckCheck } from "lucide-react";
 
 const ChatArea = ({ className = "", onOpenInfo, onBackMobile }) => {
   const { user } = useAuthStore();
@@ -96,6 +96,17 @@ const ChatArea = ({ className = "", onOpenInfo, onBackMobile }) => {
 
                   <div className="message-meta">
                     <span className="message-time">{formatTime(msg.createdAt)}</span>
+                    {isSent && (
+                      <span className={`message-ticks ${msg.status === "read" ? "read" : ""}`}>
+                        {msg.status === "read" ? (
+                          <CheckCheck size={16} />
+                        ) : msg.status === "delivered" ? (
+                          <CheckCheck size={16} />
+                        ) : (
+                          <Check size={16} />
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

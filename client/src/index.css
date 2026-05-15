@@ -211,6 +211,9 @@ a { color:var(--accent); text-decoration:none; }
 .message-meta { display:flex; justify-content:flex-end; align-items:center; gap:4px; margin-top:2px; }
 .message-time { font-size:11px; color:rgba(255,255,255,0.5); }
 
+.message-ticks { display:inline-flex; align-items:center; color:rgba(255,255,255,0.5); margin-left:2px; }
+.message-ticks.read { color:#53bdeb; }
+
 .message-image { max-width:300px; border-radius:6px; margin-bottom:4px; cursor:pointer; }
 .message-image img { width:100%; border-radius:6px; display:block; }
 

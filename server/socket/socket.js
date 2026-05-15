@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import User from "../models/User.js";
+import Message from "../models/Message.js";
 
 // Map userId → socketId for tracking online users
 const onlineUsers = new Map();
@@ -24,20 +25,14 @@ const setupSocket = (server) => {
       socket.join(userId); // personal room for DMs
       onlineUsers.set(userId, socket.id);
 
-      // Update DB
       await User.findByIdAndUpdate(userId, { isOnline: true });
-
-      // Broadcast online status
       io.emit("user_online", { userId, isOnline: true });
-
-      // Send current online users list
       socket.emit("online_users", Array.from(onlineUsers.keys()));
     });
 
     // Join a chat room
     socket.on("join_chat", (chatId) => {
       socket.join(chatId);
-      console.log(`👤 User joined chat room: ${chatId}`);
     });
 
     // Leave a chat room
@@ -48,14 +43,81 @@ const setupSocket = (server) => {
     // New message — broadcast to chat room
     socket.on("new_message", (message) => {
       const chat = message.chat;
-
       if (!chat || !chat.users) return;
 
       chat.users.forEach((user) => {
-        // Don't send back to sender
         if (user._id === message.sender._id) return;
-        socket.to(user._id).emit("message_received", message);
+
+        // If recipient is online, mark as delivered
+        if (onlineUsers.has(user._id)) {
+          Message.findByIdAndUpdate(message._id, {
+            status: "delivered",
+            $addToSet: { deliveredTo: user._id },
+          }).exec();
+
+          // Send delivered message with updated status
+          const deliveredMsg = { ...message, status: "delivered" };
+          socket.to(user._id).emit("message_received", deliveredMsg);
+
+          // Notify sender about delivery
+          socket.emit("message_status_update", {
+            messageId: message._id,
+            status: "delivered",
+          });
+        } else {
+          socket.to(user._id).emit("message_received", message);
+        }
       });
+    });
+
+    // Mark messages as delivered when user comes online
+    socket.on("mark_delivered", async ({ chatId, userId }) => {
+      try {
+        await Message.updateMany(
+          { chat: chatId, sender: { $ne: userId }, status: "sent" },
+          { status: "delivered", $addToSet: { deliveredTo: userId } }
+        );
+
+        // Notify senders
+        const updated = await Message.find({ chat: chatId, status: "delivered" })
+          .select("_id sender status");
+        updated.forEach((msg) => {
+          socket.to(msg.sender.toString()).emit("message_status_update", {
+            messageId: msg._id,
+            status: "delivered",
+          });
+        });
+      } catch (err) {
+        console.error("mark_delivered error:", err.message);
+      }
+    });
+
+    // Mark messages as read when user opens the chat
+    socket.on("mark_read", async ({ chatId, userId }) => {
+      try {
+        const result = await Message.updateMany(
+          { chat: chatId, sender: { $ne: userId }, status: { $ne: "read" } },
+          { status: "read", $addToSet: { readBy: userId } }
+        );
+
+        if (result.modifiedCount > 0) {
+          // Get all updated messages to notify senders
+          const readMsgs = await Message.find({ chat: chatId, sender: { $ne: userId }, status: "read" })
+            .select("_id sender");
+          
+          readMsgs.forEach((msg) => {
+            socket.to(msg.sender.toString()).emit("message_status_update", {
+              messageId: msg._id,
+              status: "read",
+            });
+          });
+
+          // Also broadcast to chat room
+          socket.to(chatId).emit("messages_read", { chatId, userId });
+        }
+      } catch (err) {
+        console.error("mark_read error:", err.message);
+      }
     });
 
     // Typing indicator
@@ -85,16 +147,12 @@ const setupSocket = (server) => {
 
     // Disconnect
     socket.on("disconnect", async () => {
-      console.log(`❌ User disconnected: ${socket.id}`);
-
       if (socket.userId) {
         onlineUsers.delete(socket.userId);
-
         await User.findByIdAndUpdate(socket.userId, {
           isOnline: false,
           lastSeen: new Date(),
         });
-
         io.emit("user_online", {
           userId: socket.userId,
           isOnline: false,

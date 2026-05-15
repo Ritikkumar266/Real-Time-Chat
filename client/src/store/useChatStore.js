@@ -45,21 +45,22 @@ const useChatStore = create((set, get) => ({
 
     newSocket.on("message_received", (message) => {
       const { activeChat, chats } = get();
+      const chatId = message.chat._id || message.chat;
 
-      // If the message is for the active chat, add it to messages
-      if (activeChat && (message.chat._id === activeChat._id || message.chat === activeChat._id)) {
+      // If the message is for the active chat, add it and mark as read
+      if (activeChat && (chatId === activeChat._id)) {
         set((state) => ({
           messages: [...state.messages, message],
         }));
+        // Auto mark as read since user is viewing this chat
+        newSocket.emit("mark_read", { chatId: activeChat._id, userId: newSocket.userId });
       }
 
       // Update chat list with latest message
       set((state) => {
-        const chatId = message.chat._id || message.chat;
         const updatedChats = state.chats.map((c) =>
           c._id === chatId ? { ...c, latestMessage: message } : c
         );
-        // Move chat to top
         const chatIndex = updatedChats.findIndex((c) => c._id === chatId);
         if (chatIndex > 0) {
           const [chat] = updatedChats.splice(chatIndex, 1);
@@ -69,12 +70,31 @@ const useChatStore = create((set, get) => ({
       });
 
       // Show notification if not active chat
-      if (!activeChat || (message.chat._id !== activeChat._id && message.chat !== activeChat._id)) {
+      if (!activeChat || chatId !== activeChat._id) {
         toast(`💬 ${message.sender.username}: ${message.content || "Sent a file"}`, {
           icon: "🔔",
           duration: 3000,
         });
       }
+    });
+
+    // Message status updates (delivered / read)
+    newSocket.on("message_status_update", ({ messageId, status }) => {
+      set((state) => ({
+        messages: state.messages.map((m) =>
+          m._id === messageId ? { ...m, status } : m
+        ),
+      }));
+    });
+
+    // All messages in a chat marked as read
+    newSocket.on("messages_read", ({ chatId }) => {
+      set((state) => ({
+        messages: state.messages.map((m) => {
+          const mChatId = m.chat?._id || m.chat;
+          return mChatId === chatId ? { ...m, status: "read" } : m;
+        }),
+      }));
     });
 
     newSocket.on("chat_created", (chat) => {
@@ -103,6 +123,9 @@ const useChatStore = create((set, get) => ({
         return { typingUsers: updated };
       });
     });
+
+    // Store userId on socket for mark_read
+    newSocket.userId = userId;
 
     set({ socket: newSocket });
   },
@@ -137,9 +160,10 @@ const useChatStore = create((set, get) => ({
       socket.emit("leave_chat", activeChat._id);
     }
 
-    // Join new room
+    // Join new room and mark messages as read
     if (chat && socket) {
       socket.emit("join_chat", chat._id);
+      socket.emit("mark_read", { chatId: chat._id, userId: socket.userId });
     }
 
     set({ activeChat: chat, messages: [] });
