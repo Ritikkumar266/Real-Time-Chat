@@ -67,7 +67,7 @@ const ChatArea = ({ className = "", onOpenInfo, onBackMobile }) => {
           messages.map((msg) => {
             const isSent = msg.sender._id === user._id || msg.sender === user._id;
             return (
-              <div key={msg._id}>
+              <div key={msg._id} className="message-wrapper">
                 {renderDateSep(msg)}
                 <div className={`message-bubble ${isSent ? "sent" : "received"}`}>
                   {!isSent && activeChat.isGroupChat && (
