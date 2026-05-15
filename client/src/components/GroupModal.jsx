@@ -1,9 +1,10 @@
 import { useState } from "react";
 import useChatStore from "../store/useChatStore";
 import { X } from "lucide-react";
+import { fileUrl } from "../lib/utils";
 
 const GroupModal = ({ onClose }) => {
-  const { searchUsers, searchResults, clearSearch, createGroupChat } = useChatStore();
+  const { searchUsers, searchResults, clearSearch, createGroupChat, allUsers } = useChatStore();
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState([]);
@@ -27,6 +28,11 @@ const GroupModal = ({ onClose }) => {
     await createGroupChat(name, selected.map((u) => u._id));
     onClose();
   };
+
+  // Show search results when searching, otherwise show all users
+  const usersToShow = query.trim() ? searchResults : allUsers;
+  // Filter out already selected users
+  const filteredUsers = usersToShow.filter((u) => !selected.find((s) => s._id === u._id));
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -56,15 +62,14 @@ const GroupModal = ({ onClose }) => {
             </div>
           )}
 
-          {searchResults.map((u) => (
+          {filteredUsers.map((u) => (
             <div
               key={u._id}
               className="search-result-item"
               onClick={() => toggleUser(u)}
-              style={{ background: selected.find(s => s._id === u._id) ? "var(--accent-dim)" : "" }}
             >
               <div className="search-result-avatar">
-                {u.profilePic ? <img src={u.profilePic} alt="" /> : "👤"}
+                {u.profilePic ? <img src={fileUrl(u.profilePic)} alt="" /> : "👤"}
               </div>
               <div className="search-result-info">
                 <h4>{u.username}</h4>
