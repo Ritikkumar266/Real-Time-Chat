@@ -1,12 +1,14 @@
 import { useState, useRef, useCallback } from "react";
 import useAuthStore from "../store/useAuthStore";
 import useChatStore from "../store/useChatStore";
+import useThemeStore from "../store/useThemeStore";
 import { Paperclip, Send, Smile, X } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 
 const MessageInput = () => {
   const { user } = useAuthStore();
   const { activeChat, sendMessage, emitTyping, emitStopTyping } = useChatStore();
+  const { theme } = useThemeStore();
   const [text, setText] = useState("");
   const [file, setFile] = useState(null);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -59,7 +61,7 @@ const MessageInput = () => {
         </button>
         {showEmoji && (
           <div className="emoji-picker-container">
-            <EmojiPicker theme="dark" onEmojiClick={(e) => setText(t => t + e.emoji)} width={320} height={400} />
+            <EmojiPicker theme={theme} onEmojiClick={(e) => setText(t => t + e.emoji)} width={320} height={400} />
           </div>
         )}
         <button className="icon-btn" onClick={() => fileRef.current?.click()}>

@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
 import useAuthStore from "../store/useAuthStore";
+import useThemeStore from "../store/useThemeStore";
 import { fileUrl } from "../lib/utils";
-import { ArrowLeft, Camera, Lock, LogOut } from "lucide-react";
+import { ArrowLeft, Camera, Lock, LogOut, Sun, Moon } from "lucide-react";
 
 const SettingsPanel = ({ onClose }) => {
   const { user, updateProfile, changePassword, logout, isLoading } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
   const [about, setAbout] = useState(user.about || "");
   const [editAbout, setEditAbout] = useState(false);
   const [showPwForm, setShowPwForm] = useState(false);
@@ -84,6 +86,16 @@ const SettingsPanel = ({ onClose }) => {
           </button>
         </div>
       )}
+
+      <button className="theme-toggle-btn" onClick={toggleTheme}>
+        <span className="theme-icon">
+          {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
+        </span>
+        <span className="theme-toggle-label">
+          {theme === "dark" ? "Dark Mode" : "Light Mode"}
+        </span>
+        <span className="theme-toggle-pill" />
+      </button>
 
       <button className="settings-btn danger" onClick={logout}>
         <LogOut size={18} /> Log out

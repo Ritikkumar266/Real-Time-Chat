@@ -2,12 +2,18 @@ import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import useAuthStore from "./store/useAuthStore";
+import useThemeStore from "./store/useThemeStore";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Home from "./pages/Home";
 
 function App() {
   const { user, isCheckingAuth, checkAuth } = useAuthStore();
+  const { initTheme } = useThemeStore();
+
+  useEffect(() => {
+    initTheme();
+  }, []);
 
   useEffect(() => {
     checkAuth();
@@ -28,9 +34,9 @@ function App() {
         position="top-center"
         toastOptions={{
           style: {
-            background: "#202c33",
-            color: "#e9edef",
-            border: "1px solid #222d34",
+            background: "var(--bg-modal)",
+            color: "var(--text-primary)",
+            border: "1px solid var(--border)",
             borderRadius: "10px",
             fontSize: "14px",
           },
