@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import { generateToken } from "../middleware/auth.js";
+import { uploadToCloudinary, getCloudinaryFolder } from "../middleware/upload.js";
 
 // @desc    Register a new user
 // @route   POST /api/auth/signup
@@ -22,7 +23,8 @@ export const signup = async (req, res) => {
 
     let profilePic = "";
     if (req.file) {
-      profilePic = `/uploads/avatars/${req.file.filename}`;
+      const result = await uploadToCloudinary(req.file.buffer, getCloudinaryFolder("avatar"), "image");
+      profilePic = result.secure_url;
     }
 
     const user = await User.create({ username, email, password, profilePic });

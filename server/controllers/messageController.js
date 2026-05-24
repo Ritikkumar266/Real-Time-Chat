@@ -1,5 +1,6 @@
 import Message from "../models/Message.js";
 import Chat from "../models/Chat.js";
+import { uploadToCloudinary, getCloudinaryFolder } from "../middleware/upload.js";
 
 // @desc    Send a message (text or file)
 // @route   POST /api/messages
@@ -18,8 +19,13 @@ export const sendMessage = async (req, res) => {
 
     if (req.file) {
       const isImage = req.file.mimetype.startsWith("image/");
+      const result = await uploadToCloudinary(
+        req.file.buffer,
+        getCloudinaryFolder("message"),
+        isImage ? "image" : "auto"
+      );
       messageData.messageType = isImage ? "image" : "file";
-      messageData.fileUrl = `/uploads/messages/${req.file.filename}`;
+      messageData.fileUrl = result.secure_url;
       messageData.fileName = req.file.originalname;
       messageData.fileSize = req.file.size;
     }

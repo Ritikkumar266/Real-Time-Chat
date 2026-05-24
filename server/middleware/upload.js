@@ -1,32 +1,8 @@
 import multer from "multer";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
+import cloudinary from "../config/cloudinary.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Create uploads directories
-const dirs = ["uploads/avatars", "uploads/groups", "uploads/messages"];
-dirs.forEach((dir) => {
-  const fullPath = path.join(__dirname, "..", dir);
-  if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
-});
-
-// Disk storage — saves files to /uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    let folder = "uploads/messages";
-    if (req.uploadType === "avatar") folder = "uploads/avatars";
-    if (req.uploadType === "group") folder = "uploads/groups";
-    cb(null, path.join(__dirname, "..", folder));
-  },
-  filename: (req, file, cb) => {
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, unique + ext);
-  },
-});
+// Use memory storage — files stay in buffer, then we upload to Cloudinary
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
@@ -48,10 +24,47 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// Middleware to set upload type
+// Middleware to set upload type (used to determine Cloudinary folder)
 export const setUploadType = (type) => (req, res, next) => {
   req.uploadType = type;
   next();
+};
+
+/**
+ * Upload a file buffer to Cloudinary.
+ * @param {Buffer} fileBuffer - The file buffer from multer memoryStorage
+ * @param {string} folder - Cloudinary folder (e.g. "zingchat/avatars")
+ * @param {string} resourceType - "image" or "auto" (for non-image files)
+ * @returns {Promise<object>} Cloudinary upload result with secure_url, public_id, etc.
+ */
+export const uploadToCloudinary = (fileBuffer, folder, resourceType = "auto") => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: resourceType,
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    stream.end(fileBuffer);
+  });
+};
+
+/**
+ * Get the Cloudinary folder based on upload type.
+ */
+export const getCloudinaryFolder = (uploadType) => {
+  switch (uploadType) {
+    case "avatar":
+      return "zingchat/avatars";
+    case "group":
+      return "zingchat/groups";
+    default:
+      return "zingchat/messages";
+  }
 };
 
 export default upload;

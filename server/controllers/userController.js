@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { uploadToCloudinary, getCloudinaryFolder } from "../middleware/upload.js";
 
 // @desc    Search users
 // @route   GET /api/users/search?q=
@@ -52,7 +53,8 @@ export const updateProfile = async (req, res) => {
     if (about !== undefined) user.about = about;
 
     if (req.file) {
-      user.profilePic = `/uploads/avatars/${req.file.filename}`;
+      const result = await uploadToCloudinary(req.file.buffer, getCloudinaryFolder("avatar"), "image");
+      user.profilePic = result.secure_url;
     }
 
     await user.save();

@@ -1,5 +1,6 @@
 import Chat from "../models/Chat.js";
 import User from "../models/User.js";
+import { uploadToCloudinary, getCloudinaryFolder } from "../middleware/upload.js";
 
 // @desc    Create or access a 1-on-1 chat
 // @route   POST /api/chats
@@ -60,7 +61,10 @@ export const createGroupChat = async (req, res) => {
     const allUsers = [...users, req.user._id.toString()];
 
     let groupPic = "";
-    if (req.file) groupPic = `/uploads/groups/${req.file.filename}`;
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer, getCloudinaryFolder("group"), "image");
+      groupPic = result.secure_url;
+    }
 
     const groupChat = await Chat.create({
       chatName: name, isGroupChat: true, users: allUsers,
@@ -86,7 +90,10 @@ export const updateGroup = async (req, res) => {
     if (!chat || !chat.isGroupChat) return res.status(404).json({ message: "Group not found" });
 
     if (chatName) chat.chatName = chatName;
-    if (req.file) chat.groupPic = `/uploads/groups/${req.file.filename}`;
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer, getCloudinaryFolder("group"), "image");
+      chat.groupPic = result.secure_url;
+    }
     await chat.save();
 
     const updated = await Chat.findById(chat._id).populate("users", "-password").populate("groupAdmin", "-password");
