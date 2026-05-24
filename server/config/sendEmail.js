@@ -3,14 +3,19 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // use STARTTLS
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
-  connectionTimeout: 10000, // 10 seconds to connect
-  greetingTimeout: 10000,   // 10 seconds for SMTP greeting
-  socketTimeout: 15000,     // 15 seconds for socket inactivity
+  tls: {
+    rejectUnauthorized: false, // allow on cloud servers
+  },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
 });
 
 /**
