@@ -2,21 +2,25 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // use STARTTLS
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  tls: {
-    rejectUnauthorized: false, // allow on cloud servers
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000,
-});
+const createTransporter = () => {
+  console.log("📧 SMTP config — user:", process.env.GMAIL_USER ? "✅ set" : "❌ missing");
+  console.log("📧 SMTP config — pass:", process.env.GMAIL_APP_PASSWORD ? "✅ set" : "❌ missing");
+
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // SSL
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+  });
+};
+
+const transporter = createTransporter();
 
 /**
  * Send OTP verification email
@@ -24,6 +28,8 @@ const transporter = nodemailer.createTransport({
  * @param {string} otp - The 6-digit OTP code (plain text)
  */
 const sendOtpEmail = async (to, otp) => {
+  console.log(`📧 Sending OTP to ${to}...`);
+
   const mailOptions = {
     from: `"ZingChat" <${process.env.GMAIL_USER}>`,
     to,
@@ -49,7 +55,9 @@ const sendOtpEmail = async (to, otp) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  const result = await transporter.sendMail(mailOptions);
+  console.log(`📧 OTP sent successfully to ${to}, messageId: ${result.messageId}`);
+  return result;
 };
 
 export default sendOtpEmail;
