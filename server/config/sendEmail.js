@@ -14,6 +14,7 @@ const createTransporter = () => {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD,
     },
+    family: 4, // Force IPv4 connection to avoid ENETUNREACH on cloud hosts without IPv6
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
