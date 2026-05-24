@@ -514,3 +514,70 @@ a { color:var(--accent); text-decoration:none; }
 .chat-item, .empty-chat, .loading-screen {
   transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
+
+/* ===== OTP VERIFICATION ===== */
+.otp-icon-wrapper {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: var(--btn-primary-text); margin-bottom: 16px;
+  box-shadow: 0 8px 30px rgba(0, 168, 132, 0.3);
+  animation: otpPulse 2s ease-in-out infinite;
+}
+@keyframes otpPulse {
+  0%, 100% { box-shadow: 0 8px 30px rgba(0, 168, 132, 0.3); }
+  50% { box-shadow: 0 8px 40px rgba(0, 168, 132, 0.5); }
+}
+
+.otp-subtitle {
+  color: var(--text-secondary); font-size: 14px; margin-top: 8px; line-height: 1.5;
+}
+.otp-subtitle strong {
+  color: var(--accent); font-weight: 600;
+}
+
+.otp-inputs {
+  display: flex; gap: 10px; justify-content: center; margin: 28px 0;
+}
+.otp-input {
+  width: 48px; height: 56px; text-align: center; font-size: 24px; font-weight: 700;
+  background: var(--bg-input); border: 2px solid var(--border);
+  border-radius: var(--radius); color: var(--text-primary);
+  outline: none; transition: all 0.2s ease; caret-color: var(--accent);
+}
+.otp-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim), 0 4px 12px rgba(0, 168, 132, 0.15);
+}
+.otp-input.filled {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.otp-resend {
+  text-align: center; margin-top: 20px; font-size: 14px;
+}
+.otp-cooldown {
+  color: var(--text-secondary);
+}
+.otp-cooldown strong {
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.otp-resend-btn {
+  background: none; border: none; color: var(--text-secondary);
+  font-size: 14px; cursor: pointer; padding: 4px 8px; transition: color 0.2s;
+  font-family: inherit;
+}
+.otp-resend-btn:hover { color: var(--text-primary); }
+.otp-resend-btn strong { color: var(--accent); }
+
+.otp-back-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 16px; padding: 10px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text-secondary);
+  font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit;
+}
+.otp-back-btn:hover {
+  background: var(--bg-hover); color: var(--text-primary); border-color: var(--text-secondary);
+}

@@ -1,13 +1,27 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import useAuthStore from "../store/useAuthStore";
-import { MessageCircle, User, Mail, Lock, Image } from "lucide-react";
+import { User, Mail, Lock, Image, ArrowLeft, ShieldCheck } from "lucide-react";
 
 const Signup = () => {
   const [form, setForm] = useState({ username: "", email: "", password: "", confirmPassword: "" });
   const [picPreview, setPicPreview] = useState(null);
   const [picFile, setPicFile] = useState(null);
-  const { signup, isLoading } = useAuthStore();
+  const { signup, verifyOtp, resendOtp, isLoading } = useAuthStore();
+
+  // OTP state
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [cooldown, setCooldown] = useState(0);
+  const otpRefs = useRef([]);
+
+  // Cooldown timer for resend
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   const handlePic = (e) => {
     const file = e.target.files[0];
@@ -27,9 +41,124 @@ const Signup = () => {
     fd.append("email", form.email);
     fd.append("password", form.password);
     if (picFile) fd.append("profilePic", picFile);
-    await signup(fd);
+
+    const result = await signup(fd);
+    if (result) {
+      setOtpEmail(result.email);
+      setOtpStep(true);
+      setCooldown(60);
+      // Focus first OTP input
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    }
   };
 
+  const handleOtpChange = (index, value) => {
+    if (value.length > 1) {
+      // Handle paste — distribute digits across inputs
+      const digits = value.replace(/\D/g, "").slice(0, 6).split("");
+      const newOtp = [...otp];
+      digits.forEach((d, i) => {
+        if (index + i < 6) newOtp[index + i] = d;
+      });
+      setOtp(newOtp);
+      const nextIndex = Math.min(index + digits.length, 5);
+      otpRefs.current[nextIndex]?.focus();
+      return;
+    }
+
+    if (!/^\d*$/.test(value)) return; // only digits
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    const otpString = otp.join("");
+    if (otpString.length !== 6) return;
+    await verifyOtp(otpEmail, otpString);
+  };
+
+  const handleResend = async () => {
+    if (cooldown > 0) return;
+    const ok = await resendOtp(otpEmail);
+    if (ok) {
+      setCooldown(60);
+      setOtp(["", "", "", "", "", ""]);
+      otpRefs.current[0]?.focus();
+    }
+  };
+
+  // OTP Verification Screen
+  if (otpStep) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <div className="auth-logo">
+            <div className="otp-icon-wrapper">
+              <ShieldCheck size={40} />
+            </div>
+            <h1>Verify Your Email</h1>
+            <p className="otp-subtitle">
+              We've sent a 6-digit code to<br />
+              <strong>{otpEmail}</strong>
+            </p>
+          </div>
+
+          <div className="otp-inputs">
+            {otp.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => (otpRefs.current[i] = el)}
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={digit}
+                onChange={(e) => handleOtpChange(i, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                className={`otp-input ${digit ? "filled" : ""}`}
+                autoFocus={i === 0}
+              />
+            ))}
+          </div>
+
+          <button
+            className="auth-btn"
+            onClick={handleVerify}
+            disabled={isLoading || otp.join("").length !== 6}
+          >
+            {isLoading ? "Verifying..." : "Verify & Create Account"}
+          </button>
+
+          <div className="otp-resend">
+            {cooldown > 0 ? (
+              <span className="otp-cooldown">Resend code in <strong>{cooldown}s</strong></span>
+            ) : (
+              <button className="otp-resend-btn" onClick={handleResend} disabled={isLoading}>
+                Didn't receive the code? <strong>Resend</strong>
+              </button>
+            )}
+          </div>
+
+          <button className="otp-back-btn" onClick={() => { setOtpStep(false); setOtp(["", "", "", "", "", ""]); }}>
+            <ArrowLeft size={16} /> Back to Sign Up
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Signup Form Screen
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -64,7 +193,7 @@ const Signup = () => {
             <input type="password" placeholder="Confirm password" value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} required />
           </div>
           <button type="submit" className="auth-btn" disabled={isLoading}>
-            {isLoading ? "Creating Account..." : "Sign Up"}
+            {isLoading ? "Sending OTP..." : "Sign Up"}
           </button>
           <div className="auth-link">
             Already have an account? <Link to="/login">Log in</Link>

@@ -7,17 +7,48 @@ const useAuthStore = create((set) => ({
   isLoading: false,
   isCheckingAuth: true,
 
+  // Step 1: Submit signup form → sends OTP email (does NOT create account yet)
   signup: async (formData) => {
     set({ isLoading: true });
     try {
       const res = await API.post("/auth/signup", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      toast.success("OTP sent to your email! 📧");
+      return res.data; // { message, email }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Signup failed");
+      return null;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // Step 2: Verify OTP → creates account and logs in
+  verifyOtp: async (email, otp) => {
+    set({ isLoading: true });
+    try {
+      const res = await API.post("/auth/verify-otp", { email, otp });
       set({ user: res.data });
       toast.success("Account created successfully! 🎉");
       return true;
     } catch (error) {
-      toast.error(error.response?.data?.message || "Signup failed");
+      toast.error(error.response?.data?.message || "Verification failed");
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  // Resend OTP
+  resendOtp: async (email) => {
+    set({ isLoading: true });
+    try {
+      await API.post("/auth/resend-otp", { email });
+      toast.success("New OTP sent! 📧");
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to resend OTP");
       return false;
     } finally {
       set({ isLoading: false });
