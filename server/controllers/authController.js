@@ -57,7 +57,7 @@ export const signup = async (req, res) => {
     } catch (emailError) {
       console.error("Email send error:", emailError.message);
       await Otp.deleteMany({ email });
-      return res.status(500).json({ message: "Failed to send OTP email. Please try again later." });
+      return res.status(500).json({ message: `Failed to send OTP email: ${emailError.message}` });
     }
 
     res.status(200).json({
